@@ -1,0 +1,402 @@
+# ═══════════════════════════════════════════════════
+# The Arena Protocol — Subgraph Schema
+# Covers all ArenaCore events across task lifecycle,
+# continuous contracts, disputes, insurance, syndicates,
+# delegation, reputation NFTs, and chain routing.
+# ═══════════════════════════════════════════════════
+
+# ─── Core Entity: Task ────────────────────────────
+
+type Task @entity {
+  id: ID!                          # taskId
+  poster: Bytes!
+  token: Bytes!
+  bounty: BigInt!
+  taskType: String!
+  deadline: BigInt!
+  slashWindow: BigInt!
+  createdAt: BigInt!
+  bidDeadline: BigInt!
+  revealDeadline: BigInt!
+  requiredVerifiers: Int!
+  status: String!                  # Open|BidReveal|Assigned|Delivered|Verifying|Completed|Failed|Disputed|Cancelled
+  criteriaHash: Bytes!
+  isHoneypot: Boolean!
+  honeypotPassed: Boolean
+
+  "Assignment fields (set on AgentAssigned)"
+  agent: Agent
+  agentStake: BigInt
+  agentPrice: BigInt
+  assignedAt: BigInt
+  deliveredAt: BigInt
+  outputHash: Bytes
+
+  "Chain routing metadata"
+  preferredChain: String
+  recommendedChain: String
+  speedPriority: Int
+  securityPriority: Int
+  costPriority: Int
+
+  "Settlement fields"
+  completedAt: BigInt
+  payout: BigInt
+  protocolFee: BigInt
+  slashAmount: BigInt
+  slashSeverity: String
+  slashBond: BigInt!
+
+  "Syndicate / Delegation bid info"
+  syndicateId: BigInt
+  delegatedOwnStake: BigInt
+  delegatedPoolStake: BigInt
+
+  "Relations"
+  bids: [Bid!]! @derivedFrom(field: "task")
+  verifications: [Verification!]! @derivedFrom(field: "task")
+  dispute: Dispute @derivedFrom(field: "task")
+  insuranceOffers: [InsuranceOffer!]! @derivedFrom(field: "task")
+  insurancePolicy: InsurancePolicy @derivedFrom(field: "task")
+  slashEvents: [SlashEvent!]! @derivedFrom(field: "task")
+
+  createdTxHash: Bytes!
+  createdBlockNumber: BigInt!
+}
+
+# ─── Agent ────────────────────────────────────────
+
+type Agent @entity {
+  id: ID!                          # address (lowercase hex)
+  address: Bytes!
+  reputation: BigInt!
+  tasksCompleted: BigInt!
+  tasksFailed: BigInt!
+  activeStake: BigInt!
+  banned: Boolean!
+  totalEarnings: BigInt!
+  totalSlashed: BigInt!
+  honeypotFlags: BigInt!
+  cooldownEnd: BigInt
+  firstSeenAt: BigInt!
+  lastActiveAt: BigInt!
+
+  "Reputation NFT"
+  reputationTokenId: BigInt
+  topSpecialization: String
+
+  "Delegation pool (as receiver)"
+  delegationPoolOpen: Boolean!
+  delegationToken: Bytes
+  delegationTotalDelegated: BigInt!
+  delegationRevenueShareBps: Int
+  delegatorCount: Int!
+
+  "Relations"
+  tasks: [Task!]! @derivedFrom(field: "agent")
+  bids: [Bid!]! @derivedFrom(field: "bidder")
+  slashEvents: [SlashEvent!]! @derivedFrom(field: "agent")
+  syndicateMemberships: [SyndicateMember!]! @derivedFrom(field: "member")
+  delegationsReceived: [Delegation!]! @derivedFrom(field: "agent")
+  delegationsGiven: [Delegation!]! @derivedFrom(field: "delegator")
+  continuousAssignments: [ContinuousContract!]! @derivedFrom(field: "agent")
+}
+
+# ─── Bid ──────────────────────────────────────────
+
+type Bid @entity {
+  id: ID!                          # taskId-bidder or contractId-bidder
+  task: Task
+  continuousContract: ContinuousContract
+  bidder: Agent!
+  commitHash: Bytes!
+  committedAt: BigInt!
+  revealed: Boolean!
+  stake: BigInt
+  price: BigInt
+  eta: BigInt
+  revealedAt: BigInt
+  won: Boolean!
+
+  "Syndicate bid"
+  syndicateId: BigInt
+  isSyndicateBid: Boolean!
+
+  "Delegation bid"
+  ownStake: BigInt
+  delegatedStake: BigInt
+  isDelegatedBid: Boolean!
+}
+
+# ─── Verification ─────────────────────────────────
+
+type Verification @entity {
+  id: ID!                          # taskId-verifier or contractId-cpIdx-verifier
+  task: Task
+  continuousContract: ContinuousContract
+  checkpointIndex: Int
+  verifier: Bytes!
+  stake: BigInt!
+  vote: String                     # Pending|Approved|Rejected
+  reportHash: Bytes
+  submittedAt: BigInt
+  timedOut: Boolean!
+  slashed: Boolean!
+  slashAmount: BigInt
+}
+
+# ─── Continuous Contract ──────────────────────────
+
+type ContinuousContract @entity {
+  id: ID!                          # contractId
+  poster: Bytes!
+  token: Bytes!
+  totalBounty: BigInt!
+  paymentPerCheckpoint: BigInt!
+  duration: BigInt!
+  checkpointInterval: BigInt!
+  createdAt: BigInt!
+  bidDeadline: BigInt!
+  revealDeadline: BigInt!
+  totalCheckpoints: Int!
+  completedCheckpoints: Int!
+  passedCheckpoints: Int!
+  failedCheckpoints: Int!
+  maxFailures: Int!
+  requiredVerifiers: Int!
+  status: String!                  # Open|BidReveal|Active|Terminated|Completed
+  criteriaHash: Bytes!
+  contractType: String!
+
+  "Assignment"
+  agent: Agent
+  agentStake: BigInt
+  agentPrice: BigInt
+  startedAt: BigInt
+  totalPaid: BigInt
+  totalSlashed: BigInt
+  stakeReturned: BigInt
+  terminationReason: String
+
+  "Relations"
+  checkpoints: [Checkpoint!]! @derivedFrom(field: "continuousContract")
+  bids: [Bid!]! @derivedFrom(field: "continuousContract")
+  slashEvents: [SlashEvent!]! @derivedFrom(field: "continuousContract")
+
+  createdTxHash: Bytes!
+  createdBlockNumber: BigInt!
+}
+
+# ─── Checkpoint ───────────────────────────────────
+
+type Checkpoint @entity {
+  id: ID!                          # contractId-checkpointIndex
+  continuousContract: ContinuousContract!
+  checkpointIndex: Int!
+  agent: Bytes!
+  outputHash: Bytes
+  submittedAt: BigInt
+  evaluatedAt: BigInt
+  status: String!                  # Pending|Submitted|Verifying|Passed|Failed|Missed
+  payoutAmount: BigInt
+  slashAmount: BigInt
+}
+
+# ─── Dispute / Arbitration ────────────────────────
+
+type Dispute @entity {
+  id: ID!                          # disputeId
+  disputeType: String!             # Task|Checkpoint
+  task: Task
+  continuousContract: ContinuousContract
+  checkpointIndex: Int
+  disputant: Bytes!
+  token: Bytes!
+  bountyAmount: BigInt!
+  disputeFee: BigInt!
+  createdAt: BigInt!
+  stakingDeadline: BigInt
+  votingDeadline: BigInt
+  status: String!                  # None|Selecting|Staking|Voting|Resolved|Expired
+
+  "Resolution"
+  resolvedInFavorOfAgent: Boolean
+  votesForAgent: Int
+  votesForPoster: Int
+  feeToProtocol: BigInt
+  feeToArbitrators: BigInt
+
+  "Relations"
+  arbitrators: [ArbitratorStake!]! @derivedFrom(field: "dispute")
+}
+
+type ArbitratorStake @entity {
+  id: ID!                          # disputeId-arbitrator
+  dispute: Dispute!
+  arbitrator: Bytes!
+  stake: BigInt!
+  vote: String                     # Pending|InFavorOfAgent|InFavorOfPoster
+  staked: Boolean!
+  votedAt: BigInt
+  slashed: Boolean!
+  slashAmount: BigInt
+  timedOut: Boolean!
+}
+
+# ─── Slash Tracking ───────────────────────────────
+
+type SlashEvent @entity {
+  id: ID!                          # txHash-logIndex
+  agent: Agent!
+  task: Task
+  continuousContract: ContinuousContract
+  amount: BigInt!
+  severity: String
+  reason: String!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
+
+# ─── Insurance ────────────────────────────────────
+
+type InsuranceOffer @entity {
+  id: ID!                          # offerId
+  insurer: Bytes!
+  task: Task!
+  coverageBps: BigInt!
+  premiumBps: BigInt!
+  maxCoverage: BigInt!
+  premium: BigInt!
+  status: String!                  # Open|Active|Claimed|Settled|Cancelled
+  createdAt: BigInt!
+  cancelledAt: BigInt
+}
+
+type InsurancePolicy @entity {
+  id: ID!                          # policyId
+  task: Task!
+  insurer: Bytes!
+  insured: Bytes!
+  maxCoverage: BigInt!
+  premiumPaid: BigInt!
+  claimedAmount: BigInt
+  status: String!                  # Active|Claimed|Settled
+  activatedAt: BigInt!
+  claimedAt: BigInt
+  settledAt: BigInt
+  returnedCapital: BigInt
+}
+
+# ─── Syndicate ────────────────────────────────────
+
+type Syndicate @entity {
+  id: ID!                          # syndicateId
+  name: String!
+  manager: Bytes!
+  token: Bytes!
+  totalStake: BigInt!
+  memberCount: Int!
+  status: String!                  # Active|Dissolved
+  createdAt: BigInt!
+
+  "Performance"
+  tasksWon: BigInt!
+  tasksCompleted: BigInt!
+  tasksFailed: BigInt!
+  totalEarnings: BigInt!
+  totalLosses: BigInt!
+
+  members: [SyndicateMember!]! @derivedFrom(field: "syndicate")
+}
+
+type SyndicateMember @entity {
+  id: ID!                          # syndicateId-member
+  syndicate: Syndicate!
+  member: Agent!
+  contribution: BigInt!
+  joinedAt: BigInt!
+  leftAt: BigInt
+  active: Boolean!
+}
+
+# ─── Delegation ───────────────────────────────────
+
+type Delegation @entity {
+  id: ID!                          # agent-delegator
+  agent: Agent!
+  delegator: Agent!
+  amount: BigInt!
+  createdAt: BigInt!
+  lastUpdatedAt: BigInt!
+  active: Boolean!
+  totalRewardsClaimed: BigInt!
+  totalLossesClaimed: BigInt!
+}
+
+# ─── Verifier Pool ────────────────────────────────
+
+type VerifierRegistration @entity {
+  id: ID!                          # address
+  verifier: Bytes!
+  stake: BigInt!
+  active: Boolean!
+  registeredAt: BigInt!
+  deregisteredAt: BigInt
+  anomalyCount: Int!
+  flagged: Boolean!
+  banned: Boolean!
+}
+
+# ─── Honeypot ─────────────────────────────────────
+
+type Honeypot @entity {
+  id: ID!                          # taskId
+  task: Task!
+  createdAt: BigInt!
+  settled: Boolean!
+  settledAt: BigInt
+  agentCaught: Boolean
+}
+
+# ─── Protocol Stats (Singleton) ───────────────────
+
+type ProtocolStats @entity {
+  "Singleton: id = 'protocol'"
+  id: ID!
+  totalTasks: BigInt!
+  totalContinuousContracts: BigInt!
+  totalBountyVolume: BigInt!
+  totalProtocolRevenue: BigInt!
+  totalSlashVolume: BigInt!
+  totalInsurancePremiums: BigInt!
+  totalInsuranceClaims: BigInt!
+  totalAgents: BigInt!
+  totalVerifiers: BigInt!
+  totalSyndicates: BigInt!
+  totalDelegated: BigInt!
+  totalDisputes: BigInt!
+  activeTasks: BigInt!
+  tasksCompleted: BigInt!
+  tasksFailed: BigInt!
+  tasksCancelled: BigInt!
+}
+
+# ─── Daily Snapshots (time-series) ────────────────
+
+type DailyStats @entity {
+  "id = day timestamp / 86400"
+  id: ID!
+  date: BigInt!
+  tasksCreated: BigInt!
+  tasksCompleted: BigInt!
+  tasksFailed: BigInt!
+  bountyVolume: BigInt!
+  protocolRevenue: BigInt!
+  slashVolume: BigInt!
+  insurancePremiums: BigInt!
+  insuranceClaims: BigInt!
+  newAgents: BigInt!
+  disputesRaised: BigInt!
+  delegationVolume: BigInt!
+}

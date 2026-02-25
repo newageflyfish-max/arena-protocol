@@ -1,0 +1,197 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: ArenaCore
+    network: base
+    source:
+      address: "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF"
+      abi: ArenaCore
+      startBlock: 0 # Replace with actual deployment block
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Task
+        - Agent
+        - Bid
+        - Verification
+        - ContinuousContract
+        - Checkpoint
+        - Dispute
+        - ArbitratorStake
+        - SlashEvent
+        - InsuranceOffer
+        - InsurancePolicy
+        - Syndicate
+        - SyndicateMember
+        - Delegation
+        - VerifierRegistration
+        - Honeypot
+        - ProtocolStats
+        - DailyStats
+      abis:
+        - name: ArenaCore
+          file: ./abis/ArenaCore.json
+      eventHandlers:
+        # ─── Core Task Lifecycle ──────────────────
+        - event: TaskCreated(indexed uint256,indexed address,uint256,string,uint256,uint8)
+          handler: handleTaskCreated
+        - event: BidCommitted(indexed uint256,indexed address,bytes32)
+          handler: handleBidCommitted
+        - event: BidRevealed(indexed uint256,indexed address,uint256,uint256,uint256)
+          handler: handleBidRevealed
+        - event: AgentAssigned(indexed uint256,indexed address,uint256,uint256)
+          handler: handleAgentAssigned
+        - event: TaskDelivered(indexed uint256,indexed address,bytes32)
+          handler: handleTaskDelivered
+        - event: VerifierAssigned(indexed uint256,indexed address,uint256)
+          handler: handleVerifierAssigned
+        - event: VerificationSubmitted(indexed uint256,indexed address,uint8)
+          handler: handleVerificationSubmitted
+        - event: TaskCompleted(indexed uint256,indexed address,uint256)
+          handler: handleTaskCompleted
+        - event: AgentSlashed(indexed uint256,indexed address,uint256,uint8)
+          handler: handleAgentSlashed
+        - event: VerifierSlashed(indexed uint256,indexed address,uint256)
+          handler: handleVerifierSlashed
+        - event: TaskDisputed(indexed uint256,indexed address)
+          handler: handleTaskDisputed
+        - event: TaskCancelled(indexed uint256)
+          handler: handleTaskCancelled
+        - event: ProtocolFeeCollected(indexed uint256,uint256)
+          handler: handleProtocolFeeCollected
+        - event: SlashBondClaimed(indexed uint256,indexed address,uint256)
+          handler: handleSlashBondClaimed
+        - event: SlashBondForfeited(indexed uint256,indexed address,uint256,uint8)
+          handler: handleSlashBondForfeited
+
+        # ─── Honeypot ────────────────────────────
+        - event: HoneypotCreated(indexed uint256)
+          handler: handleHoneypotCreated
+        - event: HoneypotSettled(indexed uint256,indexed address,bool)
+          handler: handleHoneypotSettled
+
+        # ─── Verifier Pool & VRF ─────────────────
+        - event: VerifierRegistered(indexed address,uint256)
+          handler: handleVerifierRegistered
+        - event: VerifierDeregistered(indexed address,uint256)
+          handler: handleVerifierDeregistered
+        - event: VRFVerifiersAssigned(indexed uint256,address[])
+          handler: handleVRFVerifiersAssigned
+        - event: VerifierTimedOut(indexed uint256,indexed address,uint256)
+          handler: handleVerifierTimedOut
+        - event: VerifierCooldownUpdated(uint256)
+          handler: handleVerifierCooldownUpdated
+        - event: AnomalyDetected(indexed address,string,uint256,uint256)
+          handler: handleAnomalyDetected
+        - event: VerifierAutoFlagged(indexed address,uint256)
+          handler: handleVerifierAutoFlagged
+        - event: VerifierAutoBanned(indexed address,uint256)
+          handler: handleVerifierAutoBanned
+        - event: AgentSlashCooldownApplied(indexed address,uint256)
+          handler: handleAgentSlashCooldownApplied
+
+        # ─── Continuous Contracts ─────────────────
+        - event: ContinuousContractCreated(indexed uint256,indexed address,uint256,string,uint256,uint256,uint8,uint8)
+          handler: handleContinuousContractCreated
+        - event: ContinuousBidCommitted(indexed uint256,indexed address,bytes32)
+          handler: handleContinuousBidCommitted
+        - event: ContinuousBidRevealed(indexed uint256,indexed address,uint256,uint256,uint256)
+          handler: handleContinuousBidRevealed
+        - event: ContinuousAgentAssigned(indexed uint256,indexed address,uint256,uint256)
+          handler: handleContinuousAgentAssigned
+        - event: CheckpointSubmitted(indexed uint256,indexed uint8,indexed address,bytes32)
+          handler: handleCheckpointSubmitted
+        - event: CheckpointVerifierAssigned(indexed uint256,indexed uint8,indexed address,uint256)
+          handler: handleCheckpointVerifierAssigned
+        - event: CheckpointEvaluated(indexed uint256,indexed uint8,uint8,uint256,uint256)
+          handler: handleCheckpointEvaluated
+        - event: CheckpointMissed(indexed uint256,indexed uint8)
+          handler: handleCheckpointMissed
+        - event: ContinuousContractTerminated(indexed uint256,string)
+          handler: handleContinuousContractTerminated
+        - event: ContinuousContractCompleted(indexed uint256,uint256,uint256,uint256)
+          handler: handleContinuousContractCompleted
+
+        # ─── Disputes & Arbitration ───────────────
+        - event: DisputeRaised(indexed uint256,uint8,indexed uint256,indexed address,uint256)
+          handler: handleDisputeRaised
+        - event: ArbitratorsSelected(indexed uint256,address[])
+          handler: handleArbitratorsSelected
+        - event: ArbitratorStaked(indexed uint256,indexed address,uint256)
+          handler: handleArbitratorStaked
+        - event: ArbitratorVoteSubmitted(indexed uint256,indexed address,uint8)
+          handler: handleArbitratorVoteSubmitted
+        - event: ArbitratorSlashed(indexed uint256,indexed address,uint256)
+          handler: handleArbitratorSlashed
+        - event: ArbitratorTimedOut(indexed uint256,indexed address,uint256)
+          handler: handleArbitratorTimedOut
+        - event: DisputeResolved(indexed uint256,bool,uint8,uint8)
+          handler: handleDisputeResolved
+        - event: DisputeExpired(indexed uint256,string)
+          handler: handleDisputeExpired
+        - event: DisputeFeeDistributed(indexed uint256,uint256,uint256)
+          handler: handleDisputeFeeDistributed
+
+        # ─── Insurance ────────────────────────────
+        - event: InsuranceOffered(indexed uint256,indexed address,indexed uint256,uint256,uint256,uint256,uint256)
+          handler: handleInsuranceOffered
+        - event: InsurancePurchased(indexed uint256,indexed uint256,indexed address,address,uint256,uint256)
+          handler: handleInsurancePurchased
+        - event: InsuranceClaimed(indexed uint256,indexed uint256,indexed address,uint256)
+          handler: handleInsuranceClaimed
+        - event: InsuranceSettled(indexed uint256,indexed uint256,indexed address,uint256)
+          handler: handleInsuranceSettled
+        - event: InsuranceOfferCancelled(indexed uint256)
+          handler: handleInsuranceOfferCancelled
+
+        # ─── Syndicates ──────────────────────────
+        - event: SyndicateCreated(indexed uint256,indexed address,string)
+          handler: handleSyndicateCreated
+        - event: SyndicateJoined(indexed uint256,indexed address,uint256)
+          handler: handleSyndicateJoined
+        - event: SyndicateLeft(indexed uint256,indexed address,uint256)
+          handler: handleSyndicateLeft
+        - event: SyndicateDissolved(indexed uint256)
+          handler: handleSyndicateDissolved
+        - event: SyndicateBidCommitted(indexed uint256,indexed uint256,bytes32)
+          handler: handleSyndicateBidCommitted
+        - event: SyndicateBidRevealed(indexed uint256,indexed uint256,uint256,uint256)
+          handler: handleSyndicateBidRevealed
+        - event: SyndicateRewardsDistributed(indexed uint256,indexed uint256,uint256)
+          handler: handleSyndicateRewardsDistributed
+        - event: SyndicateLossesDistributed(indexed uint256,indexed uint256,uint256)
+          handler: handleSyndicateLossesDistributed
+
+        # ─── Delegation ──────────────────────────
+        - event: DelegationPoolOpened(indexed address,address,uint256)
+          handler: handleDelegationPoolOpened
+        - event: StakeDelegated(indexed address,indexed address,uint256)
+          handler: handleStakeDelegated
+        - event: DelegationWithdrawn(indexed address,indexed address,uint256)
+          handler: handleDelegationWithdrawn
+        - event: DelegatorRevenueShareUpdated(indexed address,uint256)
+          handler: handleDelegatorRevenueShareUpdated
+        - event: DelegatedBidRevealed(indexed uint256,indexed address,uint256,uint256)
+          handler: handleDelegatedBidRevealed
+        - event: DelegatorRewardsClaimed(indexed uint256,indexed address,uint256,uint256)
+          handler: handleDelegatorRewardsClaimed
+        - event: DelegatorLossesClaimed(indexed uint256,indexed address,uint256,uint256)
+          handler: handleDelegatorLossesClaimed
+
+        # ─── Reputation NFT ──────────────────────
+        - event: ReputationNFTMinted(indexed address,indexed uint256)
+          handler: handleReputationNFTMinted
+        - event: ReputationNFTBurned(indexed address,indexed uint256)
+          handler: handleReputationNFTBurned
+
+        # ─── Chain Routing ───────────────────────
+        - event: ChainPreferenceSet(indexed uint256,uint8,uint8,uint8,uint8,uint8)
+          handler: handleChainPreferenceSet
+        - event: ChainThresholdsUpdated(uint256,uint256,uint256)
+          handler: handleChainThresholdsUpdated
+
+      file: ./src/mapping.ts

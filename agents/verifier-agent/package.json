@@ -1,0 +1,27 @@
+{
+  "name": "@arena-protocol/verifier-agent",
+  "version": "0.1.0",
+  "description": "Autonomous verification agent for The Arena protocol — independently validates agent deliverables",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@arena-protocol/sdk": "file:../../sdk",
+    "dotenv": "^16.4.0",
+    "ethers": "^6.11.0",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  },
+  "license": "MIT"
+}

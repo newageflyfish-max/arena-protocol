@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(export PATH=\"/usr/local/bin:/opt/homebrew/bin:/Users/JackArnot/.nvm/versions/node/*/bin:$HOME/.nvm/versions/node/*/bin:/usr/local/share/nvm/versions/node/*/bin:$PATH\")",
+      "Bash(node:*)",
+      "Bash(npm --version:*)",
+      "Bash(export NVM_DIR=\"$HOME/.nvm\")",
+      "Bash([ -s \"$NVM_DIR/nvm.sh\" ])",
+      "Bash(. \"$NVM_DIR/nvm.sh\")",
+      "Bash(npx hardhat clean:*)",
+      "Bash(npx hardhat compile:*)",
+      "Bash(npx hardhat test)",
+      "Bash(npx hardhat run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest run)",
+      "Bash(npx vite:*)",
+      "Bash(/opt/homebrew/bin/node:*)",
+      "Bash(ls:*)",
+      "Bash(npx hardhat node)",
+      "Bash(PATH=\"/Users/JackArnot/.nvm/versions/node/v20.20.0/bin:$PATH\" node:*)",
+      "Bash(curl:*)",
+      "Bash(PATH=\"/Users/JackArnot/.nvm/versions/node/v20.20.0/bin:$PATH\" npx hardhat test:*)",
+      "Bash(pip3 install:*)",
+      "Bash(export:*)",
+      "Bash(slither:*)",
+      "Bash(python3:*)",
+      "Bash(npx hardhat test:*)"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx hardhat run:*)",
+      "Bash(npx hardhat clean:*)",
+      "Bash(npx hardhat compile:*)",
+      "Bash(node -e:*)",
+      "Bash(node scripts/deploy-direct.js:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}

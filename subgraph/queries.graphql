@@ -1,0 +1,585 @@
+# ═══════════════════════════════════════════════════
+# The Arena Protocol — Example Subgraph Queries
+# ═══════════════════════════════════════════════════
+
+# ─── Open tasks sorted by bounty (descending) ────
+
+query OpenTasksByBounty($first: Int = 20, $skip: Int = 0) {
+  tasks(
+    where: { status: "Open" }
+    orderBy: bounty
+    orderDirection: desc
+    first: $first
+    skip: $skip
+  ) {
+    id
+    poster
+    bounty
+    taskType
+    deadline
+    requiredVerifiers
+    createdAt
+    preferredChain
+    recommendedChain
+    bids { id }
+  }
+}
+
+# ─── Agent leaderboard by reputation ─────────────
+
+query AgentLeaderboard($first: Int = 20) {
+  agents(
+    orderBy: reputation
+    orderDirection: desc
+    first: $first
+    where: { banned: false }
+  ) {
+    id
+    address
+    reputation
+    tasksCompleted
+    tasksFailed
+    totalEarnings
+    totalSlashed
+    activeStake
+    reputationTokenId
+    topSpecialization
+    delegationPoolOpen
+    delegationTotalDelegated
+  }
+}
+
+# ─── Task history by poster ──────────────────────
+
+query TasksByPoster($poster: Bytes!, $first: Int = 20, $skip: Int = 0) {
+  tasks(
+    where: { poster: $poster }
+    orderBy: createdAt
+    orderDirection: desc
+    first: $first
+    skip: $skip
+  ) {
+    id
+    bounty
+    taskType
+    status
+    createdAt
+    deadline
+    payout
+    slashAmount
+    slashSeverity
+    isHoneypot
+    preferredChain
+    recommendedChain
+    agent {
+      address
+      reputation
+    }
+    agentStake
+    agentPrice
+    syndicateId
+  }
+}
+
+# ─── Protocol revenue over time ──────────────────
+
+query ProtocolRevenueOverTime($first: Int = 30) {
+  dailyStats(
+    orderBy: date
+    orderDirection: desc
+    first: $first
+  ) {
+    id
+    date
+    tasksCreated
+    tasksCompleted
+    tasksFailed
+    bountyVolume
+    protocolRevenue
+    slashVolume
+    insurancePremiums
+    insuranceClaims
+    newAgents
+    disputesRaised
+    delegationVolume
+  }
+}
+
+# ─── Slash history ───────────────────────────────
+
+query SlashHistory($first: Int = 50, $skip: Int = 0) {
+  slashEvents(
+    orderBy: timestamp
+    orderDirection: desc
+    first: $first
+    skip: $skip
+  ) {
+    id
+    agent {
+      address
+      reputation
+      banned
+    }
+    task { id bounty taskType }
+    continuousContract { id contractType totalBounty }
+    amount
+    severity
+    reason
+    timestamp
+    txHash
+  }
+}
+
+query SlashHistoryByAgent($agent: String!, $first: Int = 20) {
+  slashEvents(
+    where: { agent: $agent }
+    orderBy: timestamp
+    orderDirection: desc
+    first: $first
+  ) {
+    id
+    amount
+    severity
+    reason
+    timestamp
+    task { id taskType bounty }
+  }
+}
+
+# ─── Insurance market stats ──────────────────────
+
+query InsuranceMarketStats {
+  protocolStats(id: "protocol") {
+    totalInsurancePremiums
+    totalInsuranceClaims
+  }
+}
+
+query ActiveInsuranceOffers($taskId: String!, $first: Int = 10) {
+  insuranceOffers(
+    where: { task: $taskId, status: "Open" }
+    orderBy: premiumBps
+    orderDirection: asc
+    first: $first
+  ) {
+    id
+    insurer
+    coverageBps
+    premiumBps
+    maxCoverage
+    premium
+    createdAt
+  }
+}
+
+query InsurancePoliciesByInsurer($insurer: Bytes!, $first: Int = 20) {
+  insurancePolicies(
+    where: { insurer: $insurer }
+    orderBy: activatedAt
+    orderDirection: desc
+    first: $first
+  ) {
+    id
+    task { id bounty taskType status }
+    insured
+    maxCoverage
+    premiumPaid
+    claimedAmount
+    status
+    activatedAt
+  }
+}
+
+# ─── Syndicate performance ───────────────────────
+
+query SyndicateLeaderboard($first: Int = 10) {
+  syndicates(
+    orderBy: totalEarnings
+    orderDirection: desc
+    first: $first
+    where: { status: "Active" }
+  ) {
+    id
+    name
+    manager
+    totalStake
+    memberCount
+    tasksWon
+    tasksCompleted
+    tasksFailed
+    totalEarnings
+    totalLosses
+  }
+}
+
+query SyndicateDetail($syndicateId: ID!) {
+  syndicate(id: $syndicateId) {
+    id
+    name
+    manager
+    totalStake
+    memberCount
+    status
+    createdAt
+    tasksWon
+    tasksCompleted
+    tasksFailed
+    totalEarnings
+    totalLosses
+    members(where: { active: true }) {
+      member { address reputation }
+      contribution
+      joinedAt
+    }
+  }
+}
+
+# ─── Delegation analytics ────────────────────────
+
+query TopDelegationPools($first: Int = 10) {
+  agents(
+    where: { delegationPoolOpen: true }
+    orderBy: delegationTotalDelegated
+    orderDirection: desc
+    first: $first
+  ) {
+    id
+    address
+    reputation
+    tasksCompleted
+    totalEarnings
+    delegationTotalDelegated
+    delegationRevenueShareBps
+    delegatorCount
+    delegationsReceived(first: 5, orderBy: amount, orderDirection: desc) {
+      delegator { address }
+      amount
+      totalRewardsClaimed
+    }
+  }
+}
+
+query DelegatorPortfolio($delegator: String!, $first: Int = 20) {
+  delegations(
+    where: { delegator: $delegator, active: true }
+    orderBy: amount
+    orderDirection: desc
+    first: $first
+  ) {
+    agent {
+      address
+      reputation
+      tasksCompleted
+      delegationRevenueShareBps
+    }
+    amount
+    totalRewardsClaimed
+    totalLossesClaimed
+    createdAt
+  }
+}
+
+# ─── Dispute analytics ───────────────────────────
+
+query RecentDisputes($first: Int = 20) {
+  disputes(
+    orderBy: createdAt
+    orderDirection: desc
+    first: $first
+  ) {
+    id
+    disputeType
+    task { id bounty taskType }
+    continuousContract { id contractType totalBounty }
+    disputant
+    disputeFee
+    status
+    resolvedInFavorOfAgent
+    votesForAgent
+    votesForPoster
+    createdAt
+    arbitrators {
+      arbitrator
+      vote
+      slashed
+    }
+  }
+}
+
+# ─── Continuous contract monitoring ──────────────
+
+query ActiveContinuousContracts($first: Int = 20) {
+  continuousContracts(
+    where: { status: "Active" }
+    orderBy: totalBounty
+    orderDirection: desc
+    first: $first
+  ) {
+    id
+    poster
+    contractType
+    totalBounty
+    totalCheckpoints
+    completedCheckpoints
+    passedCheckpoints
+    failedCheckpoints
+    maxFailures
+    agent { address reputation }
+    agentStake
+    totalPaid
+    totalSlashed
+    startedAt
+  }
+}
+
+query ContinuousContractDetail($contractId: ID!) {
+  continuousContract(id: $contractId) {
+    id
+    poster
+    contractType
+    totalBounty
+    status
+    totalCheckpoints
+    completedCheckpoints
+    passedCheckpoints
+    failedCheckpoints
+    agent { address reputation }
+    checkpoints(orderBy: checkpointIndex) {
+      checkpointIndex
+      status
+      submittedAt
+      evaluatedAt
+      payoutAmount
+      slashAmount
+    }
+  }
+}
+
+# ─── Protocol overview ───────────────────────────
+
+query ProtocolOverview {
+  protocolStats(id: "protocol") {
+    totalTasks
+    totalContinuousContracts
+    totalBountyVolume
+    totalProtocolRevenue
+    totalSlashVolume
+    totalInsurancePremiums
+    totalInsuranceClaims
+    totalAgents
+    totalVerifiers
+    totalSyndicates
+    totalDelegated
+    totalDisputes
+    activeTasks
+    tasksCompleted
+    tasksFailed
+    tasksCancelled
+  }
+}
+
+# ─── Agent full profile ─────────────────────────
+
+query AgentProfile($agent: ID!) {
+  agent(id: $agent) {
+    address
+    reputation
+    tasksCompleted
+    tasksFailed
+    totalEarnings
+    totalSlashed
+    activeStake
+    banned
+    cooldownEnd
+    honeypotFlags
+    reputationTokenId
+    topSpecialization
+    firstSeenAt
+    lastActiveAt
+    delegationPoolOpen
+    delegationTotalDelegated
+    delegationRevenueShareBps
+    delegatorCount
+    tasks(orderBy: assignedAt, orderDirection: desc, first: 10) {
+      id
+      bounty
+      taskType
+      status
+      payout
+      slashAmount
+    }
+    bids(orderBy: committedAt, orderDirection: desc, first: 20) {
+      task { id taskType bounty }
+      stake
+      price
+      revealed
+      won
+    }
+    slashEvents(orderBy: timestamp, orderDirection: desc, first: 10) {
+      amount
+      severity
+      reason
+      timestamp
+    }
+  }
+}
+
+# ─── Task detail ─────────────────────────────────
+
+query TaskDetail($taskId: ID!) {
+  task(id: $taskId) {
+    id
+    poster
+    bounty
+    taskType
+    deadline
+    requiredVerifiers
+    status
+    createdAt
+    isHoneypot
+    honeypotPassed
+    payout
+    protocolFee
+    slashAmount
+    slashSeverity
+    slashBond
+    preferredChain
+    recommendedChain
+    speedPriority
+    securityPriority
+    costPriority
+    syndicateId
+    delegatedOwnStake
+    delegatedPoolStake
+    agent {
+      address
+      reputation
+    }
+    agentStake
+    agentPrice
+    assignedAt
+    deliveredAt
+    completedAt
+    bids {
+      bidder { address reputation }
+      stake
+      price
+      eta
+      revealed
+      won
+      isSyndicateBid
+      isDelegatedBid
+    }
+    verifications {
+      verifier
+      stake
+      vote
+      submittedAt
+      timedOut
+      slashed
+    }
+    insuranceOffers {
+      id
+      insurer
+      coverageBps
+      premium
+      status
+    }
+    insurancePolicy {
+      id
+      insured
+      maxCoverage
+      premiumPaid
+      claimedAmount
+      status
+    }
+    dispute {
+      id
+      status
+      resolvedInFavorOfAgent
+      votesForAgent
+      votesForPoster
+    }
+  }
+}
+
+# ─── Verifier pool health ────────────────────────
+
+query VerifierPoolHealth($first: Int = 50) {
+  verifierRegistrations(
+    where: { active: true }
+    orderBy: stake
+    orderDirection: desc
+    first: $first
+  ) {
+    id
+    verifier
+    stake
+    registeredAt
+    anomalyCount
+    flagged
+    banned
+  }
+}
+
+# ─── Top earners ─────────────────────────────────
+
+query TopEarners($first: Int = 10) {
+  agents(
+    orderBy: totalEarnings
+    orderDirection: desc
+    first: $first
+    where: { tasksCompleted_gt: "0" }
+  ) {
+    address
+    totalEarnings
+    tasksCompleted
+    reputation
+    topSpecialization
+  }
+}
+
+# ─── Most slashed agents ─────────────────────────
+
+query MostSlashed($first: Int = 10) {
+  agents(
+    orderBy: totalSlashed
+    orderDirection: desc
+    first: $first
+    where: { totalSlashed_gt: "0" }
+  ) {
+    address
+    totalSlashed
+    tasksFailed
+    banned
+    honeypotFlags
+    slashEvents(first: 5, orderBy: amount, orderDirection: desc) {
+      amount
+      severity
+      reason
+      timestamp
+    }
+  }
+}
+
+# ─── Active tasks sorted by deadline ─────────────
+
+query ActiveTasks($first: Int = 20) {
+  tasks(
+    where: { status_in: ["Assigned", "Delivered", "Verifying"] }
+    orderBy: deadline
+    orderDirection: asc
+    first: $first
+  ) {
+    id
+    bounty
+    taskType
+    status
+    deadline
+    agent { address }
+    agentStake
+    deliveredAt
+    preferredChain
+    recommendedChain
+  }
+}

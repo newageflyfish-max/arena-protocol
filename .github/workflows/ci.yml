@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Compile & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile contracts
+        run: npx hardhat compile
+
+      - name: Run tests
+        run: npx hardhat test 2>&1 | tee test-output.txt
+
+      - name: Report test count
+        run: |
+          passing=$(grep -oP '\d+ passing' test-output.txt | head -1)
+          echo "### Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "**${passing}**" >> "$GITHUB_STEP_SUMMARY"
+
+  slither:
+    name: Slither Static Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+
+      - name: Install dependencies
+        working-directory: contracts
+        run: npm ci
+
+      - uses: crytic/slither-action@v0.4.0
+        id: slither
+        continue-on-error: true
+        with:
+          node-version: 20
+          slither-args: --filter-paths "node_modules|MockUSDC|MockVRF|MockArena|ReentrancyAttacker" --exclude naming-convention,solc-version,low-level-calls
+          fail-on: none
+          target: contracts/
+
+      - name: Summary
+        run: |
+          echo "### Slither Analysis" >> "$GITHUB_STEP_SUMMARY"
+          echo "Slither exit code: ${{ steps.slither.outcome }}" >> "$GITHUB_STEP_SUMMARY"

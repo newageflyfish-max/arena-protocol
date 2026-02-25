@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+artifacts/
+cache/
+typechain-types/
+coverage/
+
+# Environment files (contain secrets/keys)
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript cache
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+
+# Hardhat
+.hardhat/
+
+# Turbo
+.turbo/
+
+# Static analysis output
+slither-output*.json
+
+# Backup files
+*.bak
+
+# Business documents (keep on Desktop, not in repo)
+*.docx
+
+# Misc
+*.swp
+*.swo
+*~
